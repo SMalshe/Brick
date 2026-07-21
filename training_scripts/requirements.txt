@@ -1,0 +1,17 @@
+# Pinned for a torch 2.3.x / CUDA 12.1 base (the Dockerfile's pytorch image) and
+# for explicit Llama 3.2 support. If your center's CUDA/torch differs, bump these
+# to matching versions — the trainer uses only stable transformers + peft APIs,
+# so it tolerates it. torch itself is provided by the Docker base image, or
+# installed by setup.sh for the bare-metal path (not listed here on purpose).
+transformers==4.45.2
+peft==0.13.2
+accelerate==0.34.2
+datasets==2.21.0
+huggingface_hub==0.25.2
+sentencepiece==0.2.0
+protobuf==4.25.3
+# GGUF export (--to-gguf). download_assets.py also installs the matching gguf-py
+# from the cloned llama.cpp; this pin is a fallback.
+gguf==0.10.0
+# Only needed with --load-4bit (QLoRA on small GPUs):
+bitsandbytes==0.43.3

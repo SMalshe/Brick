@@ -1,0 +1,38 @@
+# Apptainer/Singularity definition — the HPC-native build (NO Docker required).
+#
+# On a login node (which has internet), build the container once:
+#     apptainer build toolcall-lora.sif apptainer.def
+#   (older Singularity:  singularity build toolcall-lora.sif apptainer.def)
+#
+# The build bakes in torch+CUDA, all deps, llama.cpp, the ungated base model,
+# and the training data — so the GPU compute node runs fully offline, with no
+# Hugging Face token and nothing to edit. Then:  sbatch run.slurm
+Bootstrap: docker
+From: pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime
+
+%files
+    requirements.txt   /workspace/requirements.txt
+    train_lora.py      /workspace/train_lora.py
+    download_assets.py /workspace/download_assets.py
+    make_data.py       /workspace/make_data.py
+    system_prompt.txt  /workspace/system_prompt.txt
+    data               /workspace/data
+
+%post
+    apt-get update && apt-get install -y --no-install-recommends git && \
+        rm -rf /var/lib/apt/lists/*
+    cd /workspace
+    pip install --no-cache-dir -r requirements.txt
+    # generate data if it wasn't shipped in, then bake model + llama.cpp in
+    [ -s data/toolcall.jsonl ] || python make_data.py --out data/toolcall.jsonl
+    python download_assets.py
+
+%environment
+    export LLAMACPP_DIR=/workspace/assets/llama.cpp
+    export HF_HUB_OFFLINE=1
+    export TRANSFORMERS_OFFLINE=1
+
+# `apptainer run --nv toolcall-lora.sif --to-gguf` trains; args pass through.
+%runscript
+    cd /workspace
+    exec python train_lora.py "$@"

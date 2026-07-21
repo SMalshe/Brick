@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($cs = Get-CimInstance Win32_ComputerSystem; \"RAM: {0:N1} GB\" -f \\($cs.TotalPhysicalMemory/1GB\\); Get-CimInstance Win32_VideoController | ForEach-Object { \"GPU: $\\($_.Name\\)\" }; $cpu = Get-CimInstance Win32_Processor; \"CPU: $\\($cpu.Name\\) \\($\\($cpu.NumberOfCores\\) cores\\)\"; \"Free disk C: {0:N1} GB\" -f \\(\\(Get-PSDrive C\\).Free/1GB\\))",
+      "PowerShell(curl.exe -L -o \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\downloads\\\\python-3.12.10-amd64.exe\" \"https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe\" --silent --show-error; \"Python installer: {0:N1} MB\" -f \\(\\(Get-Item \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\downloads\\\\python-3.12.10-amd64.exe\"\\).Length/1MB\\))",
+      "PowerShell(\"Ollama zip: {0:N1} MB\" -f \\(\\(Get-Item \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\downloads\\\\ollama-windows-arm64.zip\"\\).Length/1MB\\); Expand-Archive \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\downloads\\\\ollama-windows-arm64.zip\" -DestinationPath \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\ollama\" -Force; Get-ChildItem \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\ollama\" | Select-Object Name, @{n='MB';e={[math]::Round\\($_.Length/1MB,1\\)}})",
+      "PowerShell(Start-Process -FilePath \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\downloads\\\\python-3.12.10-amd64.exe\" -ArgumentList '/quiet','InstallAllUsers=0',\"TargetDir=C:\\\\Users\\\\Lab User\\\\SAIL\\\\python\",'Include_pip=1','Include_launcher=0','AssociateFiles=0','Shortcuts=0','PrependPath=0' -Wait)",
+      "PowerShell(& \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\python\\\\python.exe\" --version)",
+      "PowerShell(\"User env OLLAMA_MODELS: $\\([Environment]::GetEnvironmentVariable\\('OLLAMA_MODELS','User'\\)\\)\"; \"Machine env OLLAMA_MODELS: $\\([Environment]::GetEnvironmentVariable\\('OLLAMA_MODELS','Machine'\\)\\)\"; \"SAIL models dir: {0:N1} MB\" -f \\(\\(Get-ChildItem \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\ollama\\\\models\" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum\\).Sum/1MB\\); Get-ChildItem \"C:\\\\Users\\\\Lab User\\\\.ollama\" -ErrorAction SilentlyContinue | Select-Object Name)"
+    ]
+  }
+}
