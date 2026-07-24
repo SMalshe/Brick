@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Lab</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◆</span>
+    <div>
+      <h1>Agent Lab</h1>
+      <p>on-device agents · one model at a time · nothing leaves this machine</p>
+    </div>
+  </div>
+  <div class="meters" id="meters">
+    <div class="meter" id="meter-ollama"><span class="dot"></span><span class="label">checking ollama…</span></div>
+    <div class="meter hidden" id="meter-calls"><span class="label">calls</span><b id="calls-val">0/14</b>
+      <div class="bar"><i id="calls-bar"></i></div></div>
+    <div class="meter hidden" id="meter-time"><span class="label">elapsed</span><b id="time-val">0s</b></div>
+    <div class="meter hidden" id="meter-tok"><span class="label">tokens out</span><b id="tok-val">0</b></div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ------------------------------------------------------------ models -->
+  <aside class="rail">
+    <h2 class="rail-title">Models</h2>
+    <p class="rail-hint">Pick one. Each folder is its own agent with its own
+      workspace, memory and history.</p>
+    <div id="agents" class="agents"></div>
+
+    <details class="opts" id="opts">
+      <summary>Options</summary>
+      <label class="opt">
+        <span>Real folder <em>optional</em></span>
+        <input type="text" id="opt-root" placeholder="leave empty for the simulated office">
+      </label>
+      <p class="opt-note">With a folder set, the agent gets real read/write file
+        tools scoped to it — and asks you before anything destructive.</p>
+      <label class="check"><input type="checkbox" id="opt-shell"> allow shell commands</label>
+      <label class="check"><input type="checkbox" id="opt-yolo"> skip confirmations</label>
+      <label class="check"><input type="checkbox" id="opt-office"> keep office tools too</label>
+      <label class="check"><input type="checkbox" id="opt-tiers"> tiered model router</label>
+      <label class="opt inline">
+        <span>Call budget</span>
+        <input type="number" id="opt-calls" min="2" max="80" placeholder="auto">
+      </label>
+    </details>
+  </aside>
+
+  <!-- ------------------------------------------------------------- stage -->
+  <main class="stage">
+    <section class="composer">
+      <textarea id="task" rows="2" placeholder="Tell the agent what to do…"></textarea>
+      <div class="composer-actions">
+        <button id="run" class="primary" disabled>Run</button>
+        <button id="stop" class="ghost hidden">Stop</button>
+      </div>
+    </section>
+    <div id="presets" class="presets"></div>
+
+    <section class="timeline-wrap">
+      <div id="timeline" class="timeline"></div>
+      <div id="empty" class="empty">
+        <div class="empty-art">◆</div>
+        <h3>Nothing running</h3>
+        <p>Choose a model on the left, pick or type a task, and press Run.
+           Every step — the plan, each token the model writes, every tool call
+           and its result — shows up here as it happens.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ------------------------------------------------------------ folder -->
+  <aside class="folder">
+    <div class="folder-head">
+      <div>
+        <h2>Workspace</h2>
+        <p id="folder-path" class="folder-path">—</p>
+      </div>
+      <div class="folder-btns">
+        <button id="reveal" class="icon-btn" title="Open this folder on disk">⤢</button>
+        <button id="reset" class="icon-btn" title="Factory-reset this agent">↺</button>
+      </div>
+    </div>
+    <div id="tree" class="tree"></div>
+  </aside>
+</div>
+
+<!-- ------------------------------------------------------------- viewer -->
+<div id="viewer" class="viewer hidden">
+  <div class="viewer-box">
+    <div class="viewer-head">
+      <h3 id="viewer-title">—</h3>
+      <div>
+        <a id="viewer-dl" class="ghost small hidden" href="#">Download</a>
+        <button id="viewer-close" class="icon-btn">✕</button>
+      </div>
+    </div>
+    <div id="viewer-body" class="viewer-body"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

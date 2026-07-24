@@ -21,6 +21,11 @@ cd agents\8b
 .\run.ps1 "Find a free hour on Thursday and book it as Deep work"
 ```
 
+Or skip the terminal entirely: double-click **`Agent Lab.command`** (macOS) /
+**`Agent Lab.bat`** (Windows) in the project root to open a web console that runs
+any of these agents and shows its work — and its folder — live. See
+[`../webui/README.md`](../webui/README.md).
+
 ### Real-computer mode (`--root`)
 
 By default the agent only sees the simulated office world. Give it `--root` and

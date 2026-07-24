@@ -6,7 +6,20 @@
       "PowerShell(\"Ollama zip: {0:N1} MB\" -f \\(\\(Get-Item \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\downloads\\\\ollama-windows-arm64.zip\"\\).Length/1MB\\); Expand-Archive \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\downloads\\\\ollama-windows-arm64.zip\" -DestinationPath \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\ollama\" -Force; Get-ChildItem \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\ollama\" | Select-Object Name, @{n='MB';e={[math]::Round\\($_.Length/1MB,1\\)}})",
       "PowerShell(Start-Process -FilePath \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\downloads\\\\python-3.12.10-amd64.exe\" -ArgumentList '/quiet','InstallAllUsers=0',\"TargetDir=C:\\\\Users\\\\Lab User\\\\SAIL\\\\python\",'Include_pip=1','Include_launcher=0','AssociateFiles=0','Shortcuts=0','PrependPath=0' -Wait)",
       "PowerShell(& \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\python\\\\python.exe\" --version)",
-      "PowerShell(\"User env OLLAMA_MODELS: $\\([Environment]::GetEnvironmentVariable\\('OLLAMA_MODELS','User'\\)\\)\"; \"Machine env OLLAMA_MODELS: $\\([Environment]::GetEnvironmentVariable\\('OLLAMA_MODELS','Machine'\\)\\)\"; \"SAIL models dir: {0:N1} MB\" -f \\(\\(Get-ChildItem \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\ollama\\\\models\" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum\\).Sum/1MB\\); Get-ChildItem \"C:\\\\Users\\\\Lab User\\\\.ollama\" -ErrorAction SilentlyContinue | Select-Object Name)"
+      "PowerShell(\"User env OLLAMA_MODELS: $\\([Environment]::GetEnvironmentVariable\\('OLLAMA_MODELS','User'\\)\\)\"; \"Machine env OLLAMA_MODELS: $\\([Environment]::GetEnvironmentVariable\\('OLLAMA_MODELS','Machine'\\)\\)\"; \"SAIL models dir: {0:N1} MB\" -f \\(\\(Get-ChildItem \"C:\\\\Users\\\\Lab User\\\\SAIL\\\\ollama\\\\models\" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum\\).Sum/1MB\\); Get-ChildItem \"C:\\\\Users\\\\Lab User\\\\.ollama\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "Bash(curl -s http://127.0.0.1:8791/api/agents)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s \"http://127.0.0.1:8791/api/workspace?agent=3b\")",
+      "Bash(python3 -c \"import json,sys;d=json.load\\(sys.stdin\\);print\\({k:\\(len\\(v\\) if isinstance\\(v,list\\) else v\\) for k,v in d.items\\(\\)}\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type}\\\\n\" http://127.0.0.1:8791/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type}\\\\n\" http://127.0.0.1:8791/static/app.js)",
+      "Bash(curl -s \"http://127.0.0.1:8791/api/workspace?agent=../etc\")",
+      "Bash(curl -s -X POST http://127.0.0.1:8791/api/run -H 'Content-Type: application/json' -d '{\"agent\":\"3b\",\"task\":\"Find a free hour on Thursday and book it as Deep work\"}')",
+      "Bash(curl -s -N --max-time 25 \"http://127.0.0.1:8791/api/events?run=1\")",
+      "Bash(curl -s -N --max-time 90 \"http://127.0.0.1:8791/api/events?run=1\")",
+      "Bash(python3 -c ' *)",
+      "Bash(node --check webui/static/app.js)",
+      "Bash(python3 -m py_compile webui/server.py webui/runner.py harness/llm.py harness/agent.py harness/tools.py harness/model_router.py)"
     ]
   }
 }

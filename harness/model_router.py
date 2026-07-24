@@ -85,6 +85,7 @@ class ModelRouter:
         before_out, before_prompt = llm.output_tokens, llm.prompt_tokens
         t0 = time.time()
         content = llm.chat(messages, force_json=force_json, num_predict=np,
+                           role=role or self.default_role,
                            keep_alive=spec.get("keep_alive"))
         dt = time.time() - t0
 

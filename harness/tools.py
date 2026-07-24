@@ -164,9 +164,22 @@ def validate_call(name, args):
     return problems
 
 
+# Optional observation hook (the web UI sets it): hook(name, args, ok, obs)
+# after every executed call, with the arguments as actually run - i.e. after the
+# harness repaired and normalized them. None for the benchmark.
+TOOL_HOOK = None
+
+
 def execute(name, args, world, mem):
     """Execute a tool call. Returns (ok, observation_string). Identical in both
     conditions - errors come back as readable messages the model can react to."""
+    ok, obs = _execute(name, args, world, mem)
+    if TOOL_HOOK:
+        TOOL_HOOK(name, args, ok, obs)
+    return ok, obs
+
+
+def _execute(name, args, world, mem):
     if name not in TOOLS:
         return False, f"ERROR: unknown tool {name!r}. Valid tools: {', '.join(TOOLS)}"
     spec = TOOLS[name]

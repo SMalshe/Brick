@@ -94,3 +94,14 @@ Interrupted runs resume (finished tasks are skipped). Any Ollama model tag
 works in `--models` — e.g. add a ~30B-class model later. Note: the modern
 Llama family has no 30B; sizes go 1B → 3B → 8B → 70B. The nearest options are
 older-generation Llama 2 13B or a non-Llama ~30B such as `qwen2.5:32b`.
+
+## Watch a model work — Agent Lab
+
+Prefer not to touch a terminal? Double-click **`Agent Lab.command`** (macOS) or
+**`Agent Lab.bat`** (Windows). It opens a local web console where you pick a
+model, type a task, and watch the agent run live — the plan, every token as the
+model writes it, each tool call, the harness's repairs and verifier, and the
+agent's folder (inbox, calendar, files, memory) updating as it changes. Click a
+generated `.pptx`/`.xlsx` to preview it in the browser. See
+[`webui/README.md`](webui/README.md). It reuses the exact same engine, configs
+and state as the per-model agents, and leaves the benchmark path untouched.

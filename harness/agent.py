@@ -184,6 +184,12 @@ def repair_args(name, args):
 
 # ------------------------------------------------------------- transcripts ----
 
+# Optional observation hook (the web UI sets it): called as hook(kind, content)
+# for every transcript note, so a watcher sees each step as it happens. None
+# everywhere else, including the benchmark, so the loops are unaffected.
+EVENT_HOOK = None
+
+
 class Episode:
     def __init__(self):
         self.transcript = []   # readable log of everything
@@ -195,6 +201,8 @@ class Episode:
 
     def note(self, kind, content):
         self.transcript.append({"kind": kind, "content": content})
+        if EVENT_HOOK:
+            EVENT_HOOK(kind, content)
 
 
 def _obs(text):

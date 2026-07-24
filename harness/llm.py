@@ -1,9 +1,19 @@
 """Thin Ollama chat client with per-episode usage accounting."""
+import json
 import time
 
 import requests
 
 OLLAMA_URL = "http://127.0.0.1:11434"
+
+# Optional observation hook for live watchers (the web UI sets it):
+#   ("start", {"model", "role"})                     before the request goes out
+#   ("token", {"text"})                              per streamed chunk
+#   ("end",   {"model", "role", "output_tokens", "ms"})
+# While a hook is installed the reply is streamed so a watcher can see it being
+# written; the payload is otherwise identical, so sampling is unchanged. None by
+# default, so the benchmark keeps making one non-streamed request per call.
+STREAM_HOOK = None
 
 
 class LLM:
@@ -25,11 +35,13 @@ class LLM:
     def chat(self, messages, force_json=False, num_predict=700, role=None,
              keep_alive=None):
         # role is accepted so a plain LLM is drop-in interchangeable with the
-        # tiered ModelRouter (which selects a model from it); here it is unused.
+        # tiered ModelRouter (which selects a model from it); here it only
+        # labels the stream events.
+        hook = STREAM_HOOK
         payload = {
             "model": self.model,
             "messages": messages,
-            "stream": False,
+            "stream": bool(hook),
             "keep_alive": keep_alive or self.keep_alive,
             "options": {
                 "temperature": self.temperature,
@@ -40,12 +52,41 @@ class LLM:
         }
         if force_json:
             payload["format"] = "json"
+        if hook:
+            hook("start", {"model": self.model, "role": role})
         t0 = time.time()
-        r = requests.post(f"{OLLAMA_URL}/api/chat", json=payload, timeout=self.timeout)
-        r.raise_for_status()
-        data = r.json()
+        if hook:
+            content, data = self._chat_streamed(payload, hook)
+        else:
+            r = requests.post(f"{OLLAMA_URL}/api/chat", json=payload, timeout=self.timeout)
+            r.raise_for_status()
+            data = r.json()
+            content = data["message"]["content"]
         self.calls += 1
         self.wall += time.time() - t0
         self.prompt_tokens += data.get("prompt_eval_count", 0)
         self.output_tokens += data.get("eval_count", 0)
-        return data["message"]["content"]
+        if hook:
+            hook("end", {"model": self.model, "role": role,
+                         "output_tokens": data.get("eval_count", 0),
+                         "ms": int((time.time() - t0) * 1000)})
+        return content
+
+    def _chat_streamed(self, payload, hook):
+        """Same request with stream=True: hand each chunk to the hook and
+        return the joined reply plus the final chunk (which carries usage)."""
+        parts, final = [], {}
+        with requests.post(f"{OLLAMA_URL}/api/chat", json=payload,
+                           timeout=self.timeout, stream=True) as r:
+            r.raise_for_status()
+            for line in r.iter_lines(decode_unicode=True):
+                if not line:
+                    continue
+                chunk = json.loads(line)
+                piece = chunk.get("message", {}).get("content", "")
+                if piece:
+                    parts.append(piece)
+                    hook("token", {"text": piece})
+                if chunk.get("done"):
+                    final = chunk
+        return "".join(parts), final
