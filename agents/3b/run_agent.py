@@ -39,6 +39,7 @@ sys.path.insert(0, PROJECT)
 
 from harness import agent as agent_mod  # noqa: E402
 from harness import fs_tools  # noqa: E402
+from harness import profiles  # noqa: E402
 from harness.agent import run_harness  # noqa: E402
 from harness.llm import LLM, OLLAMA_URL  # noqa: E402
 from harness.memory import MemoryStore  # noqa: E402
@@ -127,6 +128,12 @@ def main():
         cfg = json.load(f)
     assert "127.0.0.1" in OLLAMA_URL or "localhost" in OLLAMA_URL, "refusing non-local endpoint"
 
+    # This model's custom harness (see harness/profiles.py). The profile owns the
+    # tuning knobs; a config "harness" block can patch individual fields.
+    profile = profiles.for_model(cfg["model"], cfg.get("harness"))
+    agent_mod.set_profile(profile)
+    cfg["num_ctx"] = cfg.get("num_ctx") or profile.num_ctx
+
     opts, task = parse_flags(sys.argv[1:])
     root = opts["root"] or cfg.get("root")
     if not task:
@@ -148,13 +155,20 @@ def main():
         today = datetime.date.today()
         agent_mod.SIM_TODAY = today
         agent_mod.SIM_TODAY_HUMAN = today.strftime("%A, %B %d, %Y")
-    agent_mod.MAX_CALLS = opts["max_calls"] or cfg.get("max_calls") or (40 if root else 14)
+    agent_mod.MAX_CALLS = (opts["max_calls"] or cfg.get("max_calls")
+                           or (40 if root else profile.max_calls))
 
     world = World(os.path.join(HERE, "workspace"), persistent=True)
     mem = MemoryStore(os.path.join(HERE, "memory", "memory.jsonl"))
     llm, router = build_llm(cfg, opts)
 
     print(f"[{cfg['name']}] fully on-device via {OLLAMA_URL}")
+    steps = f"{profile.plan_max_steps}-step plan" if profile.plan else "no planning"
+    verify = f"{profile.verify_rounds} verify round(s)" if profile.verify_rounds else "no verifier"
+    print(f"  harness profile: {profile.label} — {steps}, {verify}, "
+          f"loop-break {'on' if profile.loop_break else 'off'}, "
+          f"out<={profile.num_predict} tok, ctx {cfg['num_ctx']}")
+    print(f"    why: {profile.rationale}")
     if router:
         print(f"  model tiers: " + ", ".join(f"{r}={s['model']}" for r, s in router.roles.items()))
         print(f"  resident at once: {', '.join(router.resident_models())}  (others load on demand, evict after)")

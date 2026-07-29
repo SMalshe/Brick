@@ -1,6 +1,5 @@
-﻿{
-    "note":  "Qwen 2.5 14B (no Llama exists at 14B)",
-    "name":  "Agent 14B",
-    "model":  "qwen2.5:14b",
-    "num_ctx":  8192
+{
+  "name": "Agent 14B",
+  "model": "qwen2.5:14b",
+  "note": "Qwen 2.5 14B (no Llama at 14B) — harness profile: structured-reasoner"
 }

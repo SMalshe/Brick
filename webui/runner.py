@@ -34,6 +34,7 @@ sys.path.insert(0, PROJECT)
 from harness import agent as agent_mod  # noqa: E402
 from harness import fs_tools  # noqa: E402
 from harness import llm as llm_mod  # noqa: E402
+from harness import profiles  # noqa: E402
 from harness import tools as tools_mod  # noqa: E402
 from harness.agent import run_harness  # noqa: E402
 from harness.llm import LLM, OLLAMA_URL  # noqa: E402
@@ -180,6 +181,12 @@ def main():
         cfg = json.load(f)
     assert "127.0.0.1" in OLLAMA_URL or "localhost" in OLLAMA_URL, "refusing non-local endpoint"
 
+    # This model's custom harness. The profile owns the tuning knobs; a config
+    # "harness" block can patch individual fields.
+    profile = profiles.for_model(cfg["model"], cfg.get("harness"))
+    agent_mod.set_profile(profile)
+    cfg["num_ctx"] = cfg.get("num_ctx") or profile.num_ctx
+
     root = args.root or cfg.get("root")
     if root:
         root = fs_tools.enable(root,
@@ -192,7 +199,8 @@ def main():
         today = datetime.date.today()
         agent_mod.SIM_TODAY = today
         agent_mod.SIM_TODAY_HUMAN = today.strftime("%A, %B %d, %Y")
-    agent_mod.MAX_CALLS = args.max_calls or cfg.get("max_calls") or (40 if root else 14)
+    agent_mod.MAX_CALLS = (args.max_calls or cfg.get("max_calls")
+                           or (40 if root else profile.max_calls))
 
     world = World(os.path.join(folder, "workspace"), persistent=True)
     mem = MemoryStore(os.path.join(folder, "memory", "memory.jsonl"))
@@ -210,7 +218,7 @@ def main():
          toolset=("files only" if root and not args.with_office
                   else "files + office world" if root else "office world"),
          tiers=tiers, today=agent_mod.SIM_TODAY_HUMAN,
-         tools=sorted(tools_mod.TOOLS))
+         tools=sorted(tools_mod.TOOLS), profile=profile.to_dict())
     emit("world", **world_snapshot(world, mem, root))
 
     # ---- hooks: narrate the run without changing it ----

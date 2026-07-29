@@ -27,11 +27,23 @@ import difflib
 import json
 import re
 
+from .profiles import DEFAULT as _DEFAULT_PROFILE
 from .tools import TOOLS, execute, tool_docs, validate_call
 from .world import SIM_TODAY, SIM_TODAY_HUMAN
 
 MAX_CALLS = 14
 OBS_LIMIT = 2000  # observation truncation, same in both conditions
+
+# Per-model harness tuning (plan/verify/loop-break/output length/...). DEFAULT
+# reproduces the benchmark harness exactly; the on-device agents swap in a
+# profile chosen for their model via set_profile(). The benchmark never sets it,
+# so run_raw and the graded run_harness stay byte-identical to earlier runs.
+PROFILE = _DEFAULT_PROFILE
+
+
+def set_profile(profile):
+    global PROFILE
+    PROFILE = profile or _DEFAULT_PROFILE
 
 # Abstract on purpose: concrete example content in an instruction becomes an
 # attractor that 1B models copy verbatim. Real examples live per-tool in docs.
@@ -297,7 +309,7 @@ def plan_step(llm, messages, ep):
     obj, _ = parse_lenient(reply)
     steps = []
     if isinstance(obj, dict) and isinstance(obj.get("steps"), list):
-        for s in obj["steps"][:6]:
+        for s in obj["steps"][:PROFILE.plan_max_steps]:
             if isinstance(s, dict) and s.get("tool") in TOOLS:
                 what = str(s.get("what", ""))[:60]
                 steps.append(f"{len(steps) + 1}. {s['tool']} - {what}")
@@ -308,7 +320,7 @@ def plan_step(llm, messages, ep):
 
 def run_harness(llm, world, mem, task_text):
     ep = Episode()
-    memories = mem.search(task_text, k=3)  # inject only matches, never a recency fallback
+    memories = mem.search(task_text, k=PROFILE.memory_k)  # only matches, no recency fallback
     memory_block = ""
     if memories:
         memory_block = ("\n\nTHINGS YOU HAVE LEARNED PREVIOUSLY (apply them when relevant):\n"
@@ -317,13 +329,17 @@ def run_harness(llm, world, mem, task_text):
                                    docs=tool_docs(with_examples=True),
                                    memory_block=memory_block,
                                    extra_rules=EXTRA_RULES)
-    messages = [{"role": "system", "content": system},
-                {"role": "user", "content": f"TASK: {task_text}\n\n{PLAN_PROMPT}"}]
+    messages = [{"role": "system", "content": system}]
     ep.note("system", system)
     ep.note("task", task_text)
 
-    plan = plan_step(llm, messages, ep)
-    messages.pop()  # the plan request leaves the context; the plan re-enters as user guidance
+    # Planning is opt-out per profile: a small model that can't follow a plan
+    # should not spend a call producing one.
+    plan = ""
+    if PROFILE.plan:
+        messages.append({"role": "user", "content": f"TASK: {task_text}\n\n{PLAN_PROMPT}"})
+        plan = plan_step(llm, messages, ep)
+        messages.pop()  # the plan request leaves the context; the plan re-enters as guidance
     act = f"TASK: {task_text}\n\n"
     if plan:
         act += f"Suggested tool sequence (adapt if the results demand it):\n{plan}\n\n"
@@ -353,7 +369,8 @@ def run_harness(llm, world, mem, task_text):
         last_reply = reply
 
     while llm.calls < MAX_CALLS:
-        reply = llm.chat(messages, force_json=True, role="driver")
+        reply = llm.chat(messages, force_json=True, num_predict=PROFILE.num_predict,
+                         role="driver")
         messages.append({"role": "assistant", "content": reply})
         ep.note("model", reply)
         obj, err = parse_lenient(reply)
@@ -368,7 +385,7 @@ def run_harness(llm, world, mem, task_text):
             args = {k: v for k, v in obj.items() if k not in ("tool", "name", "thought", "args")}
 
         if name == "done":
-            if verify_rounds < 2 and llm.calls < MAX_CALLS:
+            if verify_rounds < PROFILE.verify_rounds and llm.calls < MAX_CALLS:
                 verify_rounds += 1
                 verdict = _verify(llm, world, task_text)
                 ep.note("verify", json.dumps(verdict, ensure_ascii=False))
@@ -404,7 +421,7 @@ def run_harness(llm, world, mem, task_text):
         last_reply = reply
 
         sig = json.dumps({"t": name, "a": args}, sort_keys=True, default=str)
-        if name != "think" and seen_calls.get(sig) == world_version:
+        if PROFILE.loop_break and name != "think" and seen_calls.get(sig) == world_version:
             # Identical call, unchanged world: do not re-execute. If it is a
             # verbatim repeat of the previous exchange, delete the older copy
             # (repetition in context is an attractor for small models).
@@ -426,7 +443,7 @@ def run_harness(llm, world, mem, task_text):
         if not ok:
             ep.tool_errors += 1
         obs = _obs(obs)
-        if think_streak >= 2:
+        if think_streak >= PROFILE.think_streak_cap:
             obs += " NOTE: stop thinking and take a concrete action now."
         messages.append({"role": "user", "content": f"OBSERVATION: {obs}"})
         ep.note("observation", obs)

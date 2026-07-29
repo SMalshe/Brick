@@ -14,6 +14,33 @@ point; the runner refuses non-local endpoints.
 | `14b/` | qwen2.5:14b | no Llama exists at 14B, Qwen 2.5 is the standard local choice |
 | `32b/` | qwen2.5:32b | no Llama exists at ~30B (family: 1B/3B/8B/70B) |
 
+## Each model runs its own harness
+
+The engine in `..\..\harness\agent.py` is one codebase, but its behaviour is set
+by a **per-model profile** (`..\..\harness\profiles.py`) selected automatically
+from the model tag. One setting is never right for all five sizes, because the
+models fail and succeed differently — so each gets a harness built for it:
+
+| model | profile | plan | verify | loop-break | out (tok) | ctx | budget | the idea |
+|---|---|---|---|---|---|---|---|---|
+| llama3.2:1b | `format-survival` | **off** | **off** | on | 350 | 8k | 18 | Errors are mechanical (broken JSON, wrong keys) and it loops hard. Everything goes into format repair + loop-breaking; planning and the verifier are dropped — it can't follow a plan or judge completion, and both only burn its tiny budget. Short replies keep the JSON intact; extra calls compensate. |
+| llama3.2:3b | `guided-guarded` | ≤3 | ×1 | on | 500 | 8k | 14 | Follows a *short* plan and survives *one* verify pass; a second round tends to false-negative and loop. |
+| llama3.1:8b | `balanced` | ≤5 | ×2 | on | 700 | 8k | 14 | Strong general 8B — the full harness pays off as-is. |
+| qwen2.5:14b | `structured-reasoner` | ≤6 | ×2 | on | 900 | 12k | 14 | Qwen excels at structured output, tool calls and math — richer arguments, longer plans, more room to reason, wider context to read before writing. |
+| qwen2.5:32b | `few-precise-steps` | ≤6 | ×1 | on | 1000 | 16k | 12 | The most reliable and the slowest. Trust it: one verify pass, a tight budget of high-quality steps, the longest outputs, widest context. When a call costs minutes, flailing is the expensive failure — not stopping early. |
+
+The knobs are: whether to plan and the max plan length, how many verifier rounds
+before `done()` is accepted, whether to suppress a repeated call against an
+unchanged world, the driver reply-length cap, context window, memories injected,
+and the LLM-call budget. The banner prints the active profile and *why*; the web
+UI shows it too. To tune one, edit `harness/profiles.py`, or drop a partial
+`"harness": { ... }` block into a folder's `config.json` to patch single fields.
+
+> The **benchmark** (`bench/`) deliberately does **not** use these profiles — it
+> runs the uniform default harness so the raw-vs-harness comparison stays
+> byte-identical to results already on disk. Per-model tuning is for the
+> on-device agents only.
+
 ## Use
 
 ```powershell

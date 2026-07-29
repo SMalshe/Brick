@@ -1,6 +1,5 @@
-﻿{
-    "note":  "Qwen 2.5 32B (no Llama exists at ~30B; family is 1B/3B/8B/70B)",
-    "name":  "Agent 32B",
-    "model":  "qwen2.5:32b",
-    "num_ctx":  8192
+{
+  "name": "Agent 32B",
+  "model": "qwen2.5:32b",
+  "note": "Qwen 2.5 32B (no Llama ~30B) — harness profile: few-precise-steps"
 }

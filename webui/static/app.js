@@ -71,6 +71,7 @@ function renderAgents() {
     top.append(el('span', 'agent-size', a.name.replace(/^Agent\s*/, '')),
                el('span', 'agent-speed', a.speed));
     card.append(top, el('div', 'agent-model', a.model));
+    if (a.profile) card.append(el('div', 'agent-profile', `⚙ ${a.profile.label}`));
 
     const stats = el('div', 'agent-stats');
     stats.append(el('span', null, `${a.runs} run${a.runs === 1 ? '' : 's'}`),
@@ -351,6 +352,31 @@ function onBanner(e) {
                       { text: `${e.budget} call budget` },
                       { text: e.toolset }]);
   card.append(el('div', 'banner-title', e.task));
+
+  const p = e.profile;
+  if (p) {
+    const hz = el('div', 'harness-strip');
+    hz.append(el('span', 'harness-name', `⚙ ${p.label}`));
+    const knob = (on, label) => {
+      const s = el('span', 'knob' + (on ? ' on' : ' off'), label);
+      return s;
+    };
+    hz.append(knob(p.plan, p.plan ? `plan ≤${p.plan_max_steps}` : 'no plan'),
+              knob(p.verify_rounds > 0, p.verify_rounds ? `verify ×${p.verify_rounds}` : 'no verify'),
+              knob(p.loop_break, p.loop_break ? 'loop-break' : 'loops ok'),
+              knob(true, `out ≤${p.num_predict}`),
+              knob(true, `ctx ${(p.num_ctx / 1024).toFixed(0)}k`),
+              knob(true, `think ≤${p.think_streak_cap}`),
+              knob(true, `mem ${p.memory_k}`));
+    card.append(hz);
+    if (p.rationale) {
+      const det = el('details', 'harness-why');
+      det.append(el('summary', null, 'why this harness for this model'),
+                 el('div', 'note-text', p.rationale));
+      card.append(det);
+    }
+  }
+
   const grid = el('div', 'banner-grid');
   grid.append(el('span', 'chip', `today: ${e.today}`),
               el('span', 'chip', e.endpoint));

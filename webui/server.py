@@ -33,6 +33,9 @@ AGENTS_DIR = os.path.join(PROJECT, "agents")
 OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_PORT = 8765
 
+sys.path.insert(0, PROJECT)
+from harness import profiles  # noqa: E402
+
 # Rough per-size guidance for the picker; the machine, not the harness, decides.
 SPEED_HINT = {
     "1b": ("instant", "Fast enough to feel live. Makes the most mistakes — the best "
@@ -108,6 +111,7 @@ def agent_list():
         logs_dir = os.path.join(folder, "logs")
         mem_path = os.path.join(folder, "memory", "memory.jsonl")
         speed, blurb = SPEED_HINT.get(name, ("", ""))
+        profile = profiles.for_model(cfg["model"], cfg.get("harness"))
         out.append({
             "id": name,
             "name": cfg.get("name", name),
@@ -115,6 +119,7 @@ def agent_list():
             "note": cfg.get("note", ""),
             "speed": speed,
             "blurb": blurb,
+            "profile": profile.to_dict(),
             "installed": tag_installed(cfg["model"], tags),
             "files": len(os.listdir(files_dir)) if os.path.isdir(files_dir) else 0,
             "runs": len([f for f in os.listdir(logs_dir) if f.startswith("run_")])
